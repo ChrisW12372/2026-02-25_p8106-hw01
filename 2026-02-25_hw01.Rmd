@@ -11,6 +11,9 @@ output:
     css: style.css
 ---
 
+I did this homework in an R project, which cannot be uploaded onto canvas, therefore I sent all files to GitHub. The link is: https://github.com/ChrisW12372/2026-02-25_p8106-hw01.git
+
+
 ```{r message=FALSE}
 library(tidyverse)
 library(glmnet)
