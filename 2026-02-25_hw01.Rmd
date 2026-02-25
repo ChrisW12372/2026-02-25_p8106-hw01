@@ -1,0 +1,203 @@
+---
+title: "2026-02-25_hw01"
+author: "Chris"
+date: "2026-02-25"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: cosmo
+    number_sections: true
+    css: style.css
+---
+
+```{r message=FALSE}
+library(tidyverse)
+library(glmnet)
+library(pls)
+
+set.seed(202602)
+```
+
+
+# Question a
+
+## Read the Data 
+
+```{r}
+df_train <- read_csv("data/housing_training.csv") |>
+  janitor::clean_names()
+
+df_test <- read_csv("data/housing_test.csv") |>
+  janitor::clean_names()
+```
+
+## Make a Matrix
+
+```{r}
+y_train <- df_train$sale_price
+y_test  <- df_test$sale_price
+
+x_train <- model.matrix(sale_price ~ ., df_train)[, -1]
+x_test  <- model.matrix(sale_price ~ ., df_test)[, -1]
+```
+
+
+## LASSO
+
+```{r}
+cv_lasso <- cv.glmnet(
+  x_train,
+  y_train,
+  alpha = 1      
+)
+
+plot(cv_lasso)
+```
+
+
+```{r}
+cv_lasso$lambda.min
+cv_lasso$lambda.1se
+```
+
+```{r}
+pred_test <- predict(cv_lasso, s = "lambda.min", newx = x_test)
+
+mse_test <- mean((y_test - pred_test)^2)
+
+mse_test
+```
+
+
+```{r}
+coef_1se <- coef(cv_lasso, s = "lambda.1se")
+
+sum(coef_1se != 0) - 1
+```
+
+* The optimal tuning parameter selected by cross-validation is `r cv_lasso$lambda.min` and the testing MSE is `r mse_test`.  
+* Using the 1SE rule, the selected tuning parameter is `r cv_lasso$lambda.1se`. Under this choice, 29 predictors are retained in the model (excluding the intercept).
+
+
+
+# Question b
+
+```{r}
+alphas <- seq(0.1, 0.9, by = 0.1)
+
+cv_results <- list()
+
+for (a in alphas) {
+  
+  cv_elastic <- cv.glmnet(
+    x_train,
+    y_train,
+    alpha = a
+  )
+  
+  cv_results[[as.character(a)]] <- cv_elastic
+}
+
+cv_errors <- sapply(cv_results, function(fit) min(fit$cvm))
+
+cv_errors
+```
+
+
+```{r}
+# choose the best alpha
+best_alpha <- alphas[which.min(cv_errors)]
+best_alpha
+
+best_cv <- cv_results[[as.character(best_alpha)]]
+best_lambda <- best_cv$lambda.min
+best_lambda
+```
+
+
+```{r}
+pred_elastic <- predict(best_cv, s = "lambda.min", newx = x_test)
+
+mse_elastic <- mean((y_test - pred_elastic)^2)
+
+mse_elastic
+```
+
+
+* An elastic net model was fit using 10-fold cross-validation over a grid of alpha values ranging from 0.1 to 0.9. For each alpha, the optimal lambda was selected via cross-validation. The minimum cross-validation error was achieved at alpha = `r best_alpha` with lambda = `r best_lambda`. The test MSE is 4.43 × 10^8, which is comparable to that obtained from LASSO.  
+
+* Since elastic net involves tuning two parameters, the 1SE rule is not applicable because the cross-validation error is defined over a two-dimensional grid rather than a single curve.  
+
+
+# Question c
+
+
+```{r}
+pls_fit <- plsr(
+  sale_price ~ .,
+  data = df_train,
+  scale = TRUE,
+  validation = "CV"
+)
+validationplot(pls_fit, val.type = "MSEP")
+```
+
+
+```{r}
+# find the best components
+cv_mse <- RMSEP(pls_fit)$val[1, , -1]
+best_ncomp <- which.min(cv_mse)
+best_ncomp
+```
+
+
+```{r}
+# make predictions using best components
+pred_pls <- predict(pls_fit, newdata = df_test, ncomp = best_ncomp)
+
+mse_pls <- mean((y_test - pred_pls)^2)
+
+mse_pls
+```
+
+A partial least squares model was fit using 10-fold cross-validation to determine the optimal number of components. The minimum cross-validation error was achieved at 12 components. The test MSE is `r mse_pls`. The predictive performance is comparable to that of LASSO and elastic net.  
+
+
+
+# Question d
+
+Among the three models, LASSO and elastic net have nearly the same test errors, while PLS performs a little worse, therefore PLS is not an option. Based on the principle of parsimony, LASSO is preferred due to its simpler tuning procedure and its ability to perform variable selection. Therefore, LASSO is chosen as the final model for prediction.  
+
+
+# Question e
+
+The tuning parameters selected by `caret` and `glmnet` may differ slightly. This is expected because the two packages use different tuning grids, cross-validation folds, and preprocessing procedures. In particular, `glmnet` generates its own λ sequence, while `caret` evaluates a predefined grid. Such discrepancies are normal and typically do not lead to substantial differences in predictive performance.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
