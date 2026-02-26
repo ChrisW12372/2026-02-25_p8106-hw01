@@ -193,7 +193,7 @@ lasso_caret$bestTune
 ```
 
 
-* To make a fair comparison for LASSO, I fixed alpha = 1 in caret and tuned only lambda. Under this setting, caret selected lambda = 40.405, which is close to `glmnet`’s 38.517.  
+* To make a fair comparison for LASSO, I fixed alpha = 1 in caret and tuned only lambda. Under this setting, caret selected lambda = `r lasso_caret$bestTune$lambda`, which is close to `glmnet`’s `r cv_lasso$lambda.min`.  
 * Small discrepancies between the tuning parameters selected by `caret` and `glmnet` are expected. Even when alpha is fixed at 1 for LASSO, the two packages may use different lambda grids, cross-validation folds, and preprocessing procedures. These implementation differences can lead to slightly different selected lambda values, although predictive performance is typically very similar.
 
 
