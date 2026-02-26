@@ -1510,6 +1510,7 @@ canvas, therefore I sent all files to GitHub. The link is: <a href="https://gith
 <pre class="r"><code>library(tidyverse)
 library(glmnet)
 library(pls)
+library(caret)
 
 set.seed(202602)</code></pre>
 <div id="question-a" class="section level1" number="1">
@@ -1669,13 +1670,34 @@ prediction.</p>
 </div>
 <div id="question-e" class="section level1" number="5">
 <h1><span class="header-section-number">5</span> Question e</h1>
-<p>The tuning parameters selected by <code>caret</code> and
-<code>glmnet</code> may differ slightly. This is expected because the
-two packages use different tuning grids, cross-validation folds, and
-preprocessing procedures. In particular, <code>glmnet</code> generates
-its own λ sequence, while <code>caret</code> evaluates a predefined
-grid. Such discrepancies are normal and typically do not lead to
-substantial differences in predictive performance.</p>
+<pre class="r"><code>train_control &lt;- trainControl(method = &quot;cv&quot;, number = 10)
+
+lasso_caret &lt;- train(
+  sale_price ~ .,
+  data = df_train,
+  method = &quot;glmnet&quot;,
+  trControl = train_control,
+  tuneGrid = expand.grid(
+    alpha = 1,
+    lambda = seq(0.001, 1000, length = 100)
+  )
+)
+lasso_caret$bestTune</code></pre>
+<pre><code>##   alpha lambda
+## 8     1 70.708</code></pre>
+<ul>
+<li>To make a fair comparison for LASSO, I fixed alpha = 1 in caret and
+tuned only lambda. Under this setting, caret selected lambda = 40.405,
+which is close to <code>glmnet</code>’s 38.517.<br />
+</li>
+<li>Small discrepancies between the tuning parameters selected by
+<code>caret</code> and <code>glmnet</code> are expected. Even when alpha
+is fixed at 1 for LASSO, the two packages may use different lambda
+grids, cross-validation folds, and preprocessing procedures. These
+implementation differences can lead to slightly different selected
+lambda values, although predictive performance is typically very
+similar.</li>
+</ul>
 </div>
 
 

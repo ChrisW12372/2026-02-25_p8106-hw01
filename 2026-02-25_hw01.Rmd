@@ -18,6 +18,7 @@ I did this homework in an R project, which cannot be uploaded onto canvas, there
 library(tidyverse)
 library(glmnet)
 library(pls)
+library(caret)
 
 set.seed(202602)
 ```
@@ -175,10 +176,25 @@ Among the three models, LASSO and elastic net have nearly the same test errors, 
 
 # Question e
 
-The tuning parameters selected by `caret` and `glmnet` may differ slightly. This is expected because the two packages use different tuning grids, cross-validation folds, and preprocessing procedures. In particular, `glmnet` generates its own λ sequence, while `caret` evaluates a predefined grid. Such discrepancies are normal and typically do not lead to substantial differences in predictive performance.
+```{r}
+train_control <- trainControl(method = "cv", number = 10)
+
+lasso_caret <- train(
+  sale_price ~ .,
+  data = df_train,
+  method = "glmnet",
+  trControl = train_control,
+  tuneGrid = expand.grid(
+    alpha = 1,
+    lambda = seq(0.001, 1000, length = 100)
+  )
+)
+lasso_caret$bestTune
+```
 
 
-
+* To make a fair comparison for LASSO, I fixed alpha = 1 in caret and tuned only lambda. Under this setting, caret selected lambda = 40.405, which is close to `glmnet`’s 38.517.  
+* Small discrepancies between the tuning parameters selected by `caret` and `glmnet` are expected. Even when alpha is fixed at 1 for LASSO, the two packages may use different lambda grids, cross-validation folds, and preprocessing procedures. These implementation differences can lead to slightly different selected lambda values, although predictive performance is typically very similar.
 
 
 
